@@ -335,9 +335,8 @@ Telegram: <a href="https://t.me/babygetyourbag">@babygetyourbag</a></p>
 <tr><td><strong>УЧАСНИКИ:</strong></td><td>Користувач, Система</td></tr>
 <tr><td><strong>ПЕРЕДУМОВИ:</strong></td><td>Користувач не має облікового запису в системі</td></tr>
 <tr><td><strong>РЕЗУЛЬТАТ:</strong></td><td>Створення нового облікового запису користувача</td></tr>
-<tr><td><strong>ВИКЛЮЧНІ СИТУАЦІЇ:</strong></td><td>Користувач вже зареєстрований (USER_ALREADY_REGISTERED)</td></tr>
+<tr><td><strong>ВИКЛЮЧНІ СИТУАЦІЇ:</strong></td><td>Обліковий запис з введеними даними вже існує (ACCOUNT_ALREADY_EXISTS)</td></tr>
 <tr><td></td><td>Під час реєстрації введені некоректні дані (INVALID_REGISTRATION_DATA)</td></tr>
-<tr><td></td><td>Обліковий запис з введеними даними вже існує (ACCOUNT_ALREADY_EXISTS)</td></tr>
 <tr><td><strong>ОСНОВНИЙ СЦЕНАРІЙ:</strong></td><td>Користувач відкриває сторінку реєстрації</td></tr>
 <tr><td></td><td>Користувач вводить реєстраційні дані</td></tr>
 <tr><td></td><td>Система перевіряє наявність користувача з наданими даними</td></tr>
@@ -363,6 +362,7 @@ Telegram: <a href="https://t.me/babygetyourbag">@babygetyourbag</a></p>
 <tr><td><strong>РЕЗУЛЬТАТ:</strong></td><td>Вихід з системи</td></tr>
 <tr><td><strong>ВИКЛЮЧНІ СИТУАЦІЇ:</strong></td><td>Користувач не авторизований у системі (USER_NOT_AUTHORIZED)</td></tr>
 <tr><td><strong>ОСНОВНИЙ СЦЕНАРІЙ:</strong></td><td>Користувач натискає кнопку виходу (Logout) із системи</td></tr>
+<tr><td></td><td>Система отримує запит на вихід</td></tr>
 <tr><td></td><td>Система завершує поточну сесію з користувачем</td></tr>
 <tr><td></td><td>Система перенаправляє користувача на головну сторінку додатку</td></tr>
 </tbody></table>
@@ -375,6 +375,7 @@ Telegram: <a href="https://t.me/babygetyourbag">@babygetyourbag</a></p>
 <tr><td></td><td>Забагато запитів за короткий період (TOO_MANY_REQUESTS)</td></tr>
 <tr><td><strong>ОСНОВНИЙ СЦЕНАРІЙ:</strong></td><td>Користувач заповнює форму пошуку</td></tr>
 <tr><td></td><td>Користувач надсилає запит на пошук</td></tr>
+<tr><td></td><td>Система перевіряє правильність запиту</td></tr>
 <tr><td></td><td>Система виконує пошук у базі даних</td></tr>
 <tr><td></td><td>Система виводить результат пошуку на екран</td></tr>
 </tbody></table>
@@ -433,13 +434,12 @@ Telegram: <a href="https://t.me/babygetyourbag">@babygetyourbag</a></p>
 <tr><td><strong>УЧАСНИКИ:</strong></td><td>Користувач, Система, Технічний експерт</td></tr>
 <tr><td><strong>ПЕРЕДУМОВИ:</strong></td><td>Користувач має бути авторизований у системі</td></tr>
 <tr><td><strong>РЕЗУЛЬТАТ:</strong></td><td>Проблему вирішено або запит зареєстровано для подальшого опрацювання</td></tr>
-<tr><td><strong>ВИКЛЮЧНІ СИТУАЦІЇ:</strong></td><td>Користувач не може пояснити проблему (PROBLEM_NOT_EXPLAINED_BY_USER)</td></tr>
-<tr><td></td><td>Технічний експерт недоступний (TECH_EXPERT_BUSY)</td></tr>
+<tr><td><strong>ВИКЛЮЧНІ СИТУАЦІЇ:</strong></td><td>Технічний експерт недоступний (TECH_EXPERT_BUSY)</td></tr>
 <tr><td><strong>ОСНОВНИЙ СЦЕНАРІЙ:</strong></td><td>Користувач надсилає запит через форму техпідтримки</td></tr>
 <tr><td></td><td>Система реєструє запит і передає його технічному експерту</td></tr>
 <tr><td></td><td>Технічний експерт аналізує проблему</td></tr>
-<tr><td></td><td>Технічний експерт надає рішення або додаткові питання</td></tr>
-<tr><td></td><td>Користувач отримує відповідь і вирішує проблему, або запит передається на подальше опрацювання</td></tr>
+<tr><td></td><td>Технічний експерт надає рішення</td></tr>
+<tr><td></td><td>Користувач отримує відповідь</td></tr>
 </tbody></table>
 </div><div class="table-wrapper"><table><thead><tr><th><strong>ID:</strong></th><th>USER_ACCOUNT_BAN</th></tr></thead><tbody>
 <tr><td><strong>НАЗВА:</strong></td><td>Видалення облікового запису користувача технічним експертом</td></tr>
