@@ -174,7 +174,6 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="Реалізація-інформаційного-та-програмного-забезпечення"><a class="header" href="#Реалізація-інформаційного-та-програмного-забезпечення">Реалізація інформаційного та програмного забезпечення</a></h1>
-<p>В рамках проекту розробляється:</p>
 <h2 id="sql-скрипт-для-створення-на-початкового-наповнення-бази-даних"><a class="header" href="#sql-скрипт-для-створення-на-початкового-наповнення-бази-даних">SQL-скрипт для створення на початкового наповнення бази даних</a></h2>
 <pre><code class="language-sql">
 CREATE SCHEMA IF NOT EXISTS db;
@@ -206,7 +205,7 @@ CREATE TABLE IF NOT EXISTS db.project (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(64) NOT NULL,
     description TEXT NOT NULL,
-    create_at DATETIME NOT NULL DEFAULT NOW(),
+    created_at DATETIME NOT NULL DEFAULT NOW(),
     user_id INT NOT NULL REFERENCES db.user (id) ON DELETE NO ACTION
 );
 
@@ -214,7 +213,7 @@ CREATE TABLE IF NOT EXISTS db.analysis_task (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(64) NOT NULL,
     status VARCHAR(64) NOT NULL,
-    create_at DATETIME NOT NULL DEFAULT NOW(),
+    created_at DATETIME NOT NULL DEFAULT NOW(),
     user_id INT NOT NULL REFERENCES db.user (id) ON DELETE NO ACTION,
     project_id INT NOT NULL REFERENCES db.project (id) ON DELETE NO ACTION
 );
@@ -229,7 +228,7 @@ CREATE TABLE IF NOT EXISTS db.report (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(64) NOT NULL,
     content TEXT NOT NULL,
-    create_at DATETIME NOT NULL DEFAULT NOW(),
+    created_at DATETIME NOT NULL DEFAULT NOW(),
     analysis_task_id INT NOT NULL REFERENCES db.analysis_task (id) ON DELETE NO ACTION
 );
 
