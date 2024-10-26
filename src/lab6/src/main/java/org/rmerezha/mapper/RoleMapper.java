@@ -8,9 +8,9 @@ public class RoleMapper implements Mapper<RoleDto, Role> {
     @Override
     public RoleDto toDto(Role role) {
         return new RoleDto(
-                role.id(),
-                role.name(),
-                role.description()
+                role.getId(),
+                role.getName(),
+                role.getDescription()
         );
     }
 

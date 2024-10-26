@@ -1,6 +1,15 @@
 package org.rmerezha.entity;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
 
 @Builder
-public record User(int id, String name, String email, String password, int role_id) {}
+@Data
+@AllArgsConstructor
+public class User{
+    int id;
+    String name; String email;
+    String password;
+    int roleId;
+}

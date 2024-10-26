@@ -8,11 +8,11 @@ public class UserMapper implements Mapper<UserDto, User> {
     @Override
     public UserDto toDto(User user) {
         return new UserDto(
-                user.id(),
-                user.name(),
-                user.email(),
-                user.password(),
-                user.role_id()
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPassword(),
+                user.getRoleId()
         );
     }
 
@@ -23,7 +23,7 @@ public class UserMapper implements Mapper<UserDto, User> {
                 userDto.name(),
                 userDto.email(),
                 userDto.password(),
-                userDto.role_id()
+                userDto.roleId()
         );
     }
 
