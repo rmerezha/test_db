@@ -6,7 +6,7 @@ public interface Repository<D, K> {
 
     Optional<D> get(K id);
 
-    void add(D dto);
+    int add(D dto);
 
     boolean update(D dto);
 

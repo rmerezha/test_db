@@ -24,9 +24,11 @@ public class UserRepository implements Repository<UserDto, Integer> {
 
     @Override
     @SneakyThrows
-    public void add(UserDto dto) {
+    public int add(UserDto dto) {
         try (var con = ConnectionPool.get()) {
-            userDao.create(userMapper.toEntity(dto), con);
+            var user = userMapper.toEntity(dto);
+            userDao.create(user, con);
+            return user.getId();
         }
     }
 

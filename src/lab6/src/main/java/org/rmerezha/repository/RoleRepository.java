@@ -24,9 +24,11 @@ public class RoleRepository implements Repository<RoleDto, Integer> {
 
     @Override
     @SneakyThrows
-    public void add(RoleDto dto) {
+    public int add(RoleDto dto) {
         try (var con = ConnectionPool.get()) {
-            roleDao.create(roleMapper.toEntity(dto), con);
+            var role = roleMapper.toEntity(dto);
+            roleDao.create(role, con);
+            return role.getId();
         }
     }
 
