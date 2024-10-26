@@ -286,6 +286,956 @@ VALUES
 
 </code></pre>
 <h2 id="restfull-сервіс-для-управління-даними"><a class="header" href="#restfull-сервіс-для-управління-даними">RESTfull сервіс для управління даними</a></h2>
+<h3 id="user-dto"><a class="header" href="#user-dto">User DTO</a></h3>
+<pre><code class="language-java">package org.rmerezha.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
+
+@Builder
+public record UserDto(int id, String name, String email, String password, @JsonProperty("role_id") int roleId) {}
+</code></pre>
+<h3 id="role-dto"><a class="header" href="#role-dto">Role DTO</a></h3>
+<pre><code class="language-java">package org.rmerezha.dto;
+
+import lombok.Builder;
+
+@Builder
+public record RoleDto(int id, String name, String description) {}
+</code></pre>
+<h3 id="user-entity"><a class="header" href="#user-entity">User entity</a></h3>
+<pre><code class="language-java">package org.rmerezha.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+
+@Builder
+@Data
+@AllArgsConstructor
+public class User{
+    int id;
+    String name; String email;
+    String password;
+    int roleId;
+}
+</code></pre>
+<h3 id="role-entity"><a class="header" href="#role-entity">Role entity</a></h3>
+<pre><code class="language-java">package org.rmerezha.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+
+@Builder
+@Data
+@AllArgsConstructor
+public class Role{
+    int id;
+    String name;
+    String description;
+}
+</code></pre>
+<h3 id="mappers"><a class="header" href="#mappers">Mappers</a></h3>
+<pre><code class="language-java">package org.rmerezha.mapper;
+
+public interface Mapper&lt;D, E&gt; {
+
+    D toDto(E entity);
+    E toEntity(D dto);
+
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.mapper;
+
+import org.rmerezha.dto.RoleDto;
+import org.rmerezha.entity.Role;
+
+public class RoleMapper implements Mapper&lt;RoleDto, Role&gt; {
+
+    @Override
+    public RoleDto toDto(Role role) {
+        return new RoleDto(
+                role.getId(),
+                role.getName(),
+                role.getDescription()
+        );
+    }
+
+    @Override
+    public Role toEntity(RoleDto roleDto) {
+        return new Role(
+                roleDto.id(),
+                roleDto.name(),
+                roleDto.description()
+        );
+    }
+}
+
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.mapper;
+
+import org.rmerezha.dto.UserDto;
+import org.rmerezha.entity.User;
+
+public class UserMapper implements Mapper&lt;UserDto, User&gt; {
+
+    @Override
+    public UserDto toDto(User user) {
+        return new UserDto(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPassword(),
+                user.getRoleId()
+        );
+    }
+
+    @Override
+    public User toEntity(UserDto userDto) {
+        return new User(
+                userDto.id(),
+                userDto.name(),
+                userDto.email(),
+                userDto.password(),
+                userDto.roleId()
+        );
+    }
+
+}
+</code></pre>
+<h3 id="properties-util"><a class="header" href="#properties-util">Properties Util</a></h3>
+<pre><code class="language-java">import java.io.IOException;
+import java.util.Properties;
+
+public class PropertiesUtil {
+
+    private static final Properties properties = new Properties();
+
+    private static final String PROPERTIES_PATH = "application.properties";
+
+    static {
+        loadProperties();
+    }
+
+    private static void loadProperties() {
+        var resourceAsStream = PropertiesUtil.class.getClassLoader().getResourceAsStream(PROPERTIES_PATH);
+        try (resourceAsStream) {
+            properties.load(resourceAsStream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String get(String key) {
+        return properties.getProperty(key);
+    }
+
+}
+</code></pre>
+<h3 id="connection-pool-for-database"><a class="header" href="#connection-pool-for-database">Connection Pool for database</a></h3>
+<pre><code class="language-java">package org.rmerezha.util;
+
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.concurrent.ArrayBlockingQueue;
+
+public class ConnectionPool {
+
+    private static final String POOL_SIZE_KEY = "db.pool.size";
+    private static final String URL_KEY = "db.url";
+    private static final String USER_KEY = "db.user";
+    private static final String PASSWD_KEY = "db.passwd";
+    private static final ArrayList&lt;Connection&gt; sourceConnections = new ArrayList&lt;&gt;();
+
+    private static ArrayBlockingQueue&lt;Connection&gt; pool;
+
+    static {
+        loadDriver();
+        initPool();
+    }
+
+    private static void loadDriver() {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void initPool() {
+        int poolSize = Integer.parseInt(PropertiesUtil.get(POOL_SIZE_KEY));
+        pool = new ArrayBlockingQueue&lt;&gt;(poolSize);
+        for (int i = 0; i &lt; poolSize; i++) {
+            var sourceConnection = createConnection();
+            var proxyConnection = (Connection)
+                    Proxy.newProxyInstance(ConnectionPool.class.getClassLoader(), new Class[]{Connection.class},
+                            (proxy, method, args) -&gt; method.getName().equals("close")
+                                    ? pool.add((Connection) proxy)
+                                    : method.invoke(sourceConnection, args));
+            pool.add(proxyConnection);
+            sourceConnections.add(sourceConnection);
+        }
+    }
+
+    private static Connection createConnection() {
+        try {
+            return DriverManager.getConnection(
+                    PropertiesUtil.get(URL_KEY),
+                    PropertiesUtil.get(USER_KEY),
+                    PropertiesUtil.get(PASSWD_KEY));
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public static Connection get() {
+        try {
+            return pool.take();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+}
+</code></pre>
+<h3 id="util-for-json"><a class="header" href="#util-for-json">Util for JSON</a></h3>
+<pre><code class="language-java">package org.rmerezha.util;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import java.util.List;
+
+public class JsonBuilder {
+
+    private final static String STATUS_KEY = "status";
+    private final static String MESSAGE_KEY = "message";
+    private final static String CODE_KEY = "code";
+    private final static String DATA_KEY = "data";
+    private final static String ERRORS_KEY = "errors";
+    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectNode rootNode = mapper.createObjectNode();
+    private final ObjectNode dataNode = mapper.createObjectNode();
+
+    public JsonBuilder() {
+        mapper.registerModule(new JavaTimeModule());
+    }
+
+    public JsonBuilder setStatus(Status status) {
+        rootNode.put(STATUS_KEY, status.getType());
+        return this;
+    }
+
+    public JsonBuilder setData(String key, String val) {
+        dataNode.put(key, val);
+        return this;
+    }
+
+    public JsonBuilder setData(String key, long val) {
+        dataNode.put(key, val);
+        return this;
+    }
+
+    public JsonBuilder setData(String key, List&lt;?&gt; vals) {
+        JsonNode listNode = mapper.valueToTree(vals);
+        dataNode.set(key, listNode);
+        return this;
+    }
+
+    public JsonBuilder setMessage(String message) {
+        rootNode.put(MESSAGE_KEY, message);
+        return this;
+    }
+
+    public JsonBuilder setErrors(List&lt;Error&gt; errors) {
+        ArrayNode errorsNode = mapper.createArrayNode();
+        errors.forEach(e -&gt; {
+            ObjectNode error = mapper.createObjectNode();
+            JsonNode errorCode = mapper.valueToTree(e.getCode());
+            JsonNode errorMessage = mapper.valueToTree(e.getMessage());
+            error.set(CODE_KEY, errorCode);
+            error.set(MESSAGE_KEY, errorMessage);
+            errorsNode.add(error);
+        });
+        rootNode.set(ERRORS_KEY, errorsNode);
+        return this;
+    }
+
+    public String build() {
+        if (!dataNode.isEmpty()) {
+            rootNode.set(DATA_KEY, dataNode);
+        }
+        return rootNode.toString();
+    }
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.util;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
+
+import java.io.InputStream;
+
+public class JsonParser {
+
+    @SneakyThrows
+    public &lt;T&gt; T parse(InputStream in, Class&lt;T&gt; clazz) {
+
+        var objMapper = new ObjectMapper();
+
+        return objMapper.readValue(in, clazz);
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.util;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor
+public enum Error {
+    USER_EXIST(1, "User with this email already exists"),
+    USER_NOT_FOUND(3, "User with this id does not exist"),
+    ROLE_EXIST(1, "Role with this name already exists"),
+    ROLE_NOT_FOUND(3, "Role with this id does not exist");
+
+    private final int code;
+    private final String message;
+
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.util;
+
+import lombok.Getter;
+
+@Getter
+public enum Status {
+    SUCCESS("success"),
+    FAIL("fail");
+
+    private final String type;
+
+    Status(String type) {
+        this.type = type;
+    }
+
+}
+</code></pre>
+<h3 id="dao-layer"><a class="header" href="#dao-layer">DAO layer</a></h3>
+<pre><code class="language-java">package org.rmerezha.dao;
+
+import java.sql.Connection;
+import java.util.Optional;
+
+public interface Dao&lt;E&gt; {
+
+    void create(E entity, Connection connection);
+
+    Optional&lt;E&gt; read(int id, Connection connection);
+
+    boolean update(E entity, Connection connection);
+
+    boolean delete(int id, Connection connection);
+
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.dao;
+
+import lombok.SneakyThrows;
+import org.rmerezha.entity.User;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.Optional;
+
+public class UserDao implements Dao&lt;User&gt; {
+
+    private final static String CREATE = """
+                    INSERT INTO user (name, email, password, role_id)
+                    VALUES (?, ?, ?, ?);
+                    """;
+
+    private final static String READ = """
+                    SELECT id,
+                           name,
+                           email,
+                           password,
+                           role_id
+                    FROM user
+                    WHERE id = ?;
+                    """;
+
+    private final static String UPDATE = """
+                    UPDATE user
+                    SET name = ?, email = ?, password = ?, role_id = ?
+                    WHERE id = ?;
+                    """;
+
+    private final static String DELETE = """
+                    DELETE FROM user
+                    WHERE id = ?;
+                    """;
+
+    @Override
+    @SneakyThrows
+    public void create(User entity, Connection connection) {
+        try (var ps = connection.prepareStatement(CREATE, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, entity.getName());
+            ps.setString(2, entity.getEmail());
+            ps.setString(3, entity.getPassword());
+            ps.setInt(4, entity.getRoleId());
+            ps.executeUpdate();
+
+            var gk = ps.getGeneratedKeys();
+            if (gk.next()) {
+                entity.setId(gk.getInt(1));
+            }
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public Optional&lt;User&gt; read(int id, Connection connection) {
+        try (var ps = connection.prepareStatement(READ)) {
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            User user = null;
+            if (rs.next()) {
+                user = User.builder()
+                        .id(rs.getInt("id"))
+                        .name(rs.getString("name"))
+                        .email(rs.getString("email"))
+                        .password(rs.getString("password"))
+                        .roleId(rs.getInt("role_id"))
+                        .build();
+            }
+            return Optional.ofNullable(user);
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean update(User entity, Connection connection) {
+        try (var ps = connection.prepareStatement(UPDATE)) {
+            ps.setString(1, entity.getName());
+            ps.setString(2, entity.getEmail());
+            ps.setString(3, entity.getPassword());
+            ps.setInt(4, entity.getRoleId());
+            ps.setInt(5, entity.getId());
+            return ps.executeUpdate() != 0;
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean delete(int id, Connection connection) {
+        try (var ps = connection.prepareStatement(DELETE)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() != 0;
+        }
+    }
+}
+
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.dao;
+
+import lombok.SneakyThrows;
+import org.rmerezha.entity.Role;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.Optional;
+
+public class RoleDao implements Dao&lt;Role&gt; {
+
+    private final static String CREATE = """
+                    INSERT INTO role (name, description)
+                    VALUES (?, ?);
+                    """;
+
+    private final static String READ = """
+                    SELECT id,
+                           name,
+                           description
+                    FROM role
+                    WHERE id = ?;
+                    """;
+
+    private final static String UPDATE = """
+                    UPDATE role
+                    SET name = ?, description = ?
+                    WHERE id = ?;
+                    """;
+
+    private final static String DELETE = """
+                    DELETE FROM role
+                    WHERE id = ?;
+                    """;
+
+    @Override
+    @SneakyThrows
+    public void create(Role entity, Connection connection) {
+        try (var ps = connection.prepareStatement(CREATE, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, entity.getName());
+            ps.setString(2, entity.getDescription());
+            ps.executeUpdate();
+
+            var gk = ps.getGeneratedKeys();
+            if (gk.next()) {
+                entity.setId(gk.getInt(1));
+            }
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public Optional&lt;Role&gt; read(int id, Connection connection) {
+        try (var ps = connection.prepareStatement(READ)) {
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            Role role = null;
+            if (rs.next()) {
+                role = Role.builder()
+                        .id(rs.getInt("id"))
+                        .name(rs.getString("name"))
+                        .description(rs.getString("description"))
+                        .build();
+            }
+            return Optional.ofNullable(role);
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean update(Role entity, Connection connection) {
+        try (var ps = connection.prepareStatement(UPDATE)) {
+            ps.setString(1, entity.getName());
+            ps.setString(2, entity.getDescription());
+            ps.setInt(3, entity.getId());
+            return ps.executeUpdate() != 0;
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean delete(int id, Connection connection) {
+        try (var ps = connection.prepareStatement(DELETE)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() != 0;
+        }
+    }
+}
+</code></pre>
+<h3 id="repository-layer"><a class="header" href="#repository-layer">Repository layer</a></h3>
+<pre><code class="language-java">package org.rmerezha.repository;
+
+import java.util.Optional;
+
+public interface Repository&lt;D, K&gt; {
+
+    Optional&lt;D&gt; get(K id);
+
+    int add(D dto);
+
+    boolean update(D dto);
+
+    boolean remove(K id);
+
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.repository;
+
+import lombok.SneakyThrows;
+import org.rmerezha.dao.UserDao;
+import org.rmerezha.dto.UserDto;
+import org.rmerezha.mapper.UserMapper;
+import org.rmerezha.util.ConnectionPool;
+
+import java.util.Optional;
+
+public class UserRepository implements Repository&lt;UserDto, Integer&gt; {
+
+    private final UserDao userDao = new UserDao();
+    private final UserMapper userMapper = new UserMapper();
+
+
+    @Override
+    @SneakyThrows
+    public Optional&lt;UserDto&gt; get(Integer id) {
+        try (var con = ConnectionPool.get()) {
+            return userDao.read(id, con).map(userMapper::toDto);
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public int add(UserDto dto) {
+        try (var con = ConnectionPool.get()) {
+            var user = userMapper.toEntity(dto);
+            userDao.create(user, con);
+            return user.getId();
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean update(UserDto dto) {
+        try (var con = ConnectionPool.get()) {
+            return userDao.update(userMapper.toEntity(dto), con);
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean remove(Integer id) {
+        try (var con = ConnectionPool.get()) {
+            return userDao.delete(id, con);
+        }
+    }
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.repository;
+
+import lombok.SneakyThrows;
+import org.rmerezha.dao.RoleDao;
+import org.rmerezha.dto.RoleDto;
+import org.rmerezha.mapper.RoleMapper;
+import org.rmerezha.util.ConnectionPool;
+
+import java.util.Optional;
+
+public class RoleRepository implements Repository&lt;RoleDto, Integer&gt; {
+
+    private final RoleDao roleDao = new RoleDao();
+    private final RoleMapper roleMapper = new RoleMapper();
+
+
+    @Override
+    @SneakyThrows
+    public Optional&lt;RoleDto&gt; get(Integer id) {
+        try (var con = ConnectionPool.get()) {
+            return roleDao.read(id, con).map(roleMapper::toDto);
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public int add(RoleDto dto) {
+        try (var con = ConnectionPool.get()) {
+            var role = roleMapper.toEntity(dto);
+            roleDao.create(role, con);
+            return role.getId();
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean update(RoleDto dto) {
+        try (var con = ConnectionPool.get()) {
+            return roleDao.update(roleMapper.toEntity(dto), con);
+        }
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean remove(Integer id) {
+        try (var con = ConnectionPool.get()) {
+            return roleDao.delete(id, con);
+        }
+    }
+
+}
+</code></pre>
+<h3 id="service-layer"><a class="header" href="#service-layer">Service layer</a></h3>
+<pre><code class="language-java">package org.rmerezha.service;
+
+import java.io.InputStream;
+
+public interface Service {
+
+    String get(InputStream jsonStream);
+
+    String add(InputStream jsonStream);
+
+    String update(InputStream jsonStream);
+
+    String remove(InputStream jsonStream);
+
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.service;
+
+import org.rmerezha.dto.UserDto;
+import org.rmerezha.repository.UserRepository;
+import org.rmerezha.util.Error;
+import org.rmerezha.util.JsonBuilder;
+import org.rmerezha.util.JsonParser;
+import org.rmerezha.util.Status;
+
+import java.io.InputStream;
+import java.util.List;
+
+public class UserService implements Service {
+
+    private final JsonParser jsonParser = new JsonParser();
+    private final UserRepository userRepository = new UserRepository();
+
+
+    @Override
+    public String get(InputStream jsonStream) {
+        JsonBuilder jsonBuilder = new JsonBuilder();
+        var userDto = jsonParser.parse(jsonStream, UserDto.class);
+        var optUser = userRepository.get(userDto.id());
+        if (optUser.isPresent()) {
+            var user = optUser.get();
+            jsonBuilder.setStatus(Status.SUCCESS)
+                    .setData("id", user.id())
+                    .setData("name", user.name())
+                    .setData("email", user.email())
+                    .setData("password", user.password())
+                    .setData("roleId", user.roleId());
+        } else {
+            jsonBuilder.setStatus(Status.FAIL)
+                    .setErrors(List.of(Error.USER_NOT_FOUND));
+        }
+        return jsonBuilder.build();
+    }
+
+    @Override
+    public String add(InputStream jsonStream) {
+        JsonBuilder jsonBuilder = new JsonBuilder();
+        try {
+            var userDto = jsonParser.parse(jsonStream, UserDto.class);
+            int id = userRepository.add(userDto);
+            jsonBuilder.setStatus(Status.SUCCESS)
+                    .setData("id", id);
+        } catch (Exception e) {
+            jsonBuilder.setStatus(Status.FAIL).setErrors(List.of(Error.USER_EXIST));
+        }
+        return jsonBuilder.build();
+    }
+
+    @Override
+    public String update(InputStream jsonStream) {
+        JsonBuilder jsonBuilder = new JsonBuilder();
+        var userDto = jsonParser.parse(jsonStream, UserDto.class);
+        boolean isUpdated = userRepository.update(userDto);
+        if (isUpdated) {
+            jsonBuilder.setStatus(Status.SUCCESS);
+        } else {
+            jsonBuilder.setStatus(Status.FAIL)
+                    .setErrors(List.of(Error.USER_NOT_FOUND));
+        }
+        return jsonBuilder.build();
+    }
+
+    @Override
+    public String remove(InputStream jsonStream) {
+        JsonBuilder jsonBuilder = new JsonBuilder();
+        var userDto = jsonParser.parse(jsonStream, UserDto.class);
+        boolean isRemoved = userRepository.remove(userDto.id());
+        if (isRemoved) {
+            jsonBuilder.setStatus(Status.SUCCESS);
+        } else {
+            jsonBuilder.setStatus(Status.FAIL)
+                    .setErrors(List.of(Error.USER_NOT_FOUND));
+        }
+        return jsonBuilder.build();
+    }
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.service;
+
+import org.rmerezha.dto.RoleDto;
+import org.rmerezha.repository.RoleRepository;
+import org.rmerezha.util.Error;
+import org.rmerezha.util.JsonBuilder;
+import org.rmerezha.util.JsonParser;
+import org.rmerezha.util.Status;
+
+import java.io.InputStream;
+import java.util.List;
+
+public class RoleService implements Service {
+
+    private final JsonParser jsonParser = new JsonParser();
+    private final RoleRepository roleRepository = new RoleRepository();
+
+    @Override
+    public String get(InputStream jsonStream) {
+        JsonBuilder jsonBuilder = new JsonBuilder();
+        var roleDto = jsonParser.parse(jsonStream, RoleDto.class);
+        var optRole = roleRepository.get(roleDto.id());
+        if (optRole.isPresent()) {
+            var role = optRole.get();
+            jsonBuilder.setStatus(Status.SUCCESS)
+                    .setData("id", role.id())
+                    .setData("name", role.name())
+                    .setData("description", role.description());
+        } else {
+            jsonBuilder.setStatus(Status.FAIL)
+                    .setErrors(List.of(Error.ROLE_NOT_FOUND));
+        }
+        return jsonBuilder.build();
+    }
+
+    @Override
+    public String add(InputStream jsonStream) {
+        JsonBuilder jsonBuilder = new JsonBuilder();
+        try {
+            var roleDto = jsonParser.parse(jsonStream, RoleDto.class);
+            int id = roleRepository.add(roleDto);
+            jsonBuilder.setStatus(Status.SUCCESS)
+                    .setData("id", id);
+        } catch (Exception e) {
+            jsonBuilder.setStatus(Status.FAIL).setErrors(List.of(Error.ROLE_EXIST));
+        }
+        return jsonBuilder.build();
+    }
+
+    @Override
+    public String update(InputStream jsonStream) {
+        JsonBuilder jsonBuilder = new JsonBuilder();
+        var roleDto = jsonParser.parse(jsonStream, RoleDto.class);
+        boolean isUpdated = roleRepository.update(roleDto);
+        if (isUpdated) {
+            jsonBuilder.setStatus(Status.SUCCESS);
+        } else {
+            jsonBuilder.setStatus(Status.FAIL)
+                    .setErrors(List.of(Error.ROLE_NOT_FOUND));
+        }
+        return jsonBuilder.build();
+    }
+
+    @Override
+    public String remove(InputStream jsonStream) {
+        JsonBuilder jsonBuilder = new JsonBuilder();
+        var roleDto = jsonParser.parse(jsonStream, RoleDto.class);
+        boolean isRemoved = roleRepository.remove(roleDto.id());
+        if (isRemoved) {
+            jsonBuilder.setStatus(Status.SUCCESS);
+        } else {
+            jsonBuilder.setStatus(Status.FAIL)
+                    .setErrors(List.of(Error.ROLE_NOT_FOUND));
+        }
+        return jsonBuilder.build();
+    }
+}
+</code></pre>
+<h3 id="servlet-layer"><a class="header" href="#servlet-layer">Servlet layer</a></h3>
+<pre><code class="language-java">package org.rmerezha.servlet;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.rmerezha.service.UserService;
+
+import java.io.IOException;
+
+@WebServlet("/user")
+public class UserServlet extends HttpServlet {
+
+    private static final UserService USER_SERVICE = new UserService();
+
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        var json = USER_SERVICE.update(req.getInputStream());
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.getWriter().write(json);
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        var json = USER_SERVICE.remove(req.getInputStream());
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.getWriter().write(json);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        var json = USER_SERVICE.add(req.getInputStream());
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.getWriter().write(json);
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        var json = USER_SERVICE.get(req.getInputStream());
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.getWriter().write(json);
+    }
+}
+</code></pre>
+<pre><code class="language-java">package org.rmerezha.servlet;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.rmerezha.service.RoleService;
+
+import java.io.IOException;
+
+@WebServlet("/role")
+public class RoleServlet extends HttpServlet {
+
+    private static final RoleService ROLE_SERVICE = new RoleService();
+
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        var json = ROLE_SERVICE.update(req.getInputStream());
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.getWriter().write(json);
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        var json = ROLE_SERVICE.remove(req.getInputStream());
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.getWriter().write(json);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        var json = ROLE_SERVICE.add(req.getInputStream());
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.getWriter().write(json);
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        var json = ROLE_SERVICE.get(req.getInputStream());
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        resp.getWriter().write(json);
+    }
+}
+</code></pre>
 
                     </main>
 
