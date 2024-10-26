@@ -174,7 +174,107 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="Тестування-працездатності-системи"><a class="header" href="#Тестування-працездатності-системи">Тестування працездатності системи</a></h1>
-<p><em>В цьому розділі необхідно вказати засоби тестування, навести вихідні коди тестів та результати тестування.</em></p>
+<h2 id="configure-the-server-and-database-using-docker-and-docker-compose"><a class="header" href="#configure-the-server-and-database-using-docker-and-docker-compose">Configure the server and database using Docker and Docker Compose</a></h2>
+<h3 id="dockerfile"><a class="header" href="#dockerfile">Dockerfile</a></h3>
+<pre><code class="language-Dockerfile">FROM alpine:3.20 as build
+
+WORKDIR /build
+
+RUN apk add maven openjdk21
+
+COPY . .
+
+RUN mvn package
+
+FROM tomcat:10.1.24
+
+COPY --from=build /build/target/ROOT.war webapps
+</code></pre>
+<h3 id="composeyaml"><a class="header" href="#composeyaml">compose.yaml</a></h3>
+<pre><code class="language-yaml">name: lab6
+
+services:
+  backend:
+    image: tomcat_service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:8080"
+    networks:
+      - my_net
+    restart: always
+
+  database:
+    image: mysql:9.1.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=pass
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - my_net
+
+volumes:
+  mysql_data:
+    external: true
+
+networks:
+  my_net:
+    driver: bridge
+</code></pre>
+<h3 id="run-docker-compose-to-start-the-services"><a class="header" href="#run-docker-compose-to-start-the-services">Run Docker Compose to start the services</a></h3>
+<p align="center">
+    <img src="./img0.jpg">
+</p>
+<h2 id="tests"><a class="header" href="#tests">Tests</a></h2>
+<h3 id="post-role"><a class="header" href="#post-role">POST /role</a></h3>
+<p align="center">
+    <img src="./img1.png">
+</p>
+<h3 id="get-role"><a class="header" href="#get-role">GET /role</a></h3>
+<p align="center">
+    <img src="./img2.png">
+</p>
+<h3 id="put-role"><a class="header" href="#put-role">PUT /role</a></h3>
+<p align="center">
+    <img src="./img3.png">
+</p>
+<h3 id="delete-role"><a class="header" href="#delete-role">DELETE /role</a></h3>
+<p align="center">
+    <img src="./img4.png">
+</p>
+<h3 id="putgetdelete-role-with-wrond-id-error"><a class="header" href="#putgetdelete-role-with-wrond-id-error">PUT/GET/DELETE /role with wrond id (ERROR)</a></h3>
+<p align="center">
+    <img src="./img5.png">
+</p>
+<h3 id="post-role-with-a-non-unique-name-error"><a class="header" href="#post-role-with-a-non-unique-name-error">POST /role with a non-unique name (ERROR)</a></h3>
+<p align="center">
+    <img src="./img6.png">
+</p>
+<h3 id="post-user"><a class="header" href="#post-user">POST /user</a></h3>
+<p align="center">
+    <img src="./img21.png">
+</p>
+<h3 id="get-user"><a class="header" href="#get-user">GET /user</a></h3>
+<p align="center">
+    <img src="./img22.png">
+</p>
+<h3 id="put-user"><a class="header" href="#put-user">PUT /user</a></h3>
+<p align="center">
+    <img src="./img23.png">
+</p>
+<h3 id="delete-user"><a class="header" href="#delete-user">DELETE /user</a></h3>
+<p align="center">
+    <img src="./img24.png">
+</p>
+<h3 id="putgetdelete-user-with-wrond-id-error"><a class="header" href="#putgetdelete-user-with-wrond-id-error">PUT/GET/DELETE /user with wrond id (ERROR)</a></h3>
+<p align="center">
+    <img src="./img25.png">
+</p>
+<h3 id="post-user-with-a-non-unique-email-error"><a class="header" href="#post-user-with-a-non-unique-email-error">POST /user with a non-unique email (ERROR)</a></h3>
+<p align="center">
+    <img src="./img26.png">
+</p>
 
                     </main>
 
