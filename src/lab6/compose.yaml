@@ -18,7 +18,7 @@ services:
       - MYSQL_USER=mysql
       - MYSQL_PASSWORD=pass
     volumes:
-      - mysql_data
+      - mysql_data:/var/lib/mysql
     networks:
       - my_net
 
