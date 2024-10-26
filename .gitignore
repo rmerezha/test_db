@@ -8,3 +8,4 @@ docs/.vuepress/dist/
 book/
 .mdbook-plantuml-cache/
 docs/mdbook-plantuml-img/
+test_db/src/lab6/target/
