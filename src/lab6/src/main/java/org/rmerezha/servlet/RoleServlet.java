@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.rmerezha.service.RoleService;
-import org.rmerezha.service.UserService;
 
 import java.io.IOException;
 

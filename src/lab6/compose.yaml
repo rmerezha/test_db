@@ -15,8 +15,7 @@ services:
   database:
     image: mysql:9.1.0
     environment:
-      - MYSQL_USER=mysql
-      - MYSQL_PASSWORD=pass
+      - MYSQL_ROOT_PASSWORD=pass
     volumes:
       - mysql_data:/var/lib/mysql
     networks:

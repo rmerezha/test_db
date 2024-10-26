@@ -11,7 +11,7 @@ import java.util.Optional;
 public class UserDao implements Dao<User> {
 
     private final static String CREATE = """
-                    INSERT INTO User (name, email, password, role_id)
+                    INSERT INTO user (name, email, password, role_id)
                     VALUES (?, ?, ?, ?);
                     """;
 
@@ -21,18 +21,18 @@ public class UserDao implements Dao<User> {
                            email,
                            password,
                            role_id
-                    FROM User
+                    FROM user
                     WHERE id = ?;
                     """;
 
     private final static String UPDATE = """
-                    UPDATE User
+                    UPDATE user
                     SET name = ?, email = ?, password = ?, role_id = ?
                     WHERE id = ?;
                     """;
 
     private final static String DELETE = """
-                    DELETE FROM User
+                    DELETE FROM user
                     WHERE id = ?;
                     """;
 
@@ -48,7 +48,7 @@ public class UserDao implements Dao<User> {
 
             var gk = ps.getGeneratedKeys();
             if (gk.next()) {
-                entity.setId(gk.getInt("id"));
+                entity.setId(gk.getInt(1));
             }
         }
     }

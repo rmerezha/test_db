@@ -28,14 +28,12 @@ public class UserService implements Service {
                     .setData("name", user.name())
                     .setData("email", user.email())
                     .setData("password", user.password())
-                    .setData("roleId", user.roleId())
-                    .build();
+                    .setData("roleId", user.roleId());
         } else {
             jsonBuilder.setStatus(Status.FAIL)
-                    .setErrors(List.of(Error.USER_NOT_FOUND))
-                    .build();
+                    .setErrors(List.of(Error.USER_NOT_FOUND));
         }
-        return jsonBuilder.toString();
+        return jsonBuilder.build();
     }
 
     @Override
@@ -45,13 +43,11 @@ public class UserService implements Service {
             var userDto = jsonParser.parse(jsonStream, UserDto.class);
             int id = userRepository.add(userDto);
             jsonBuilder.setStatus(Status.SUCCESS)
-                    .setData("id", id)
-                    .build();
+                    .setData("id", id);
         } catch (Exception e) {
-            jsonBuilder.setStatus(Status.FAIL).setErrors(List.of(Error.USER_EXIST))
-                    .build();
+            jsonBuilder.setStatus(Status.FAIL).setErrors(List.of(Error.USER_EXIST));
         }
-        return jsonBuilder.toString();
+        return jsonBuilder.build();
     }
 
     @Override
@@ -60,14 +56,12 @@ public class UserService implements Service {
         var userDto = jsonParser.parse(jsonStream, UserDto.class);
         boolean isUpdated = userRepository.update(userDto);
         if (isUpdated) {
-            jsonBuilder.setStatus(Status.SUCCESS)
-                    .build();
+            jsonBuilder.setStatus(Status.SUCCESS);
         } else {
             jsonBuilder.setStatus(Status.FAIL)
-                    .setErrors(List.of(Error.USER_NOT_FOUND))
-                    .build();
+                    .setErrors(List.of(Error.USER_NOT_FOUND));
         }
-        return jsonBuilder.toString();
+        return jsonBuilder.build();
     }
 
     @Override
@@ -76,13 +70,11 @@ public class UserService implements Service {
         var userDto = jsonParser.parse(jsonStream, UserDto.class);
         boolean isRemoved = userRepository.remove(userDto.id());
         if (isRemoved) {
-            jsonBuilder.setStatus(Status.SUCCESS)
-                    .build();
+            jsonBuilder.setStatus(Status.SUCCESS);
         } else {
             jsonBuilder.setStatus(Status.FAIL)
-                    .setErrors(List.of(Error.USER_NOT_FOUND))
-                    .build();
+                    .setErrors(List.of(Error.USER_NOT_FOUND));
         }
-        return jsonBuilder.toString();
+        return jsonBuilder.build();
     }
 }

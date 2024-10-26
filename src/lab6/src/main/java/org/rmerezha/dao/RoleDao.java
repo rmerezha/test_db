@@ -2,7 +2,6 @@ package org.rmerezha.dao;
 
 import lombok.SneakyThrows;
 import org.rmerezha.entity.Role;
-import org.rmerezha.entity.User;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -12,7 +11,7 @@ import java.util.Optional;
 public class RoleDao implements Dao<Role> {
 
     private final static String CREATE = """
-                    INSERT INTO Role (name, description)
+                    INSERT INTO role (name, description)
                     VALUES (?, ?);
                     """;
 
@@ -20,18 +19,18 @@ public class RoleDao implements Dao<Role> {
                     SELECT id,
                            name,
                            description
-                    FROM Role
+                    FROM role
                     WHERE id = ?;
                     """;
 
     private final static String UPDATE = """
-                    UPDATE Role
+                    UPDATE role
                     SET name = ?, description = ?
                     WHERE id = ?;
                     """;
 
     private final static String DELETE = """
-                    DELETE FROM Role
+                    DELETE FROM role
                     WHERE id = ?;
                     """;
 
@@ -45,7 +44,7 @@ public class RoleDao implements Dao<Role> {
 
             var gk = ps.getGeneratedKeys();
             if (gk.next()) {
-                entity.setId(gk.getInt("id"));
+                entity.setId(gk.getInt(1));
             }
         }
     }
